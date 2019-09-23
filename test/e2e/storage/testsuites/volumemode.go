@@ -33,6 +33,7 @@ import (
 	"k8s.io/kubernetes/test/e2e/common"
 	"k8s.io/kubernetes/test/e2e/framework"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
+	e2epv "k8s.io/kubernetes/test/e2e/framework/pv"
 	"k8s.io/kubernetes/test/e2e/storage/testpatterns"
 	"k8s.io/kubernetes/test/e2e/storage/utils"
 )
@@ -72,8 +73,8 @@ func (t *volumeModeTestSuite) skipRedundantSuite(driver TestDriver, pattern test
 
 func (t *volumeModeTestSuite) defineTests(driver TestDriver, pattern testpatterns.TestPattern) {
 	type local struct {
-		config      *PerTestConfig
-		testCleanup func()
+		config        *PerTestConfig
+		driverCleanup func()
 
 		cs clientset.Interface
 		ns *v1.Namespace
@@ -102,7 +103,7 @@ func (t *volumeModeTestSuite) defineTests(driver TestDriver, pattern testpattern
 		l.cs = f.ClientSet
 
 		// Now do the more expensive test initialization.
-		l.config, l.testCleanup = driver.PrepareTest(f)
+		l.config, l.driverCleanup = driver.PrepareTest(f)
 		l.intreeOps, l.migratedOps = getMigrationVolumeOpCounts(f.ClientSet, dInfo.InTreePluginName)
 	}
 
@@ -143,8 +144,8 @@ func (t *volumeModeTestSuite) defineTests(driver TestDriver, pattern testpattern
 
 				storageClass, pvConfig, pvcConfig := generateConfigsForPreprovisionedPVTest(scName, volBindMode, pattern.VolMode, *pvSource, volumeNodeAffinity)
 				l.sc = storageClass
-				l.pv = framework.MakePersistentVolume(pvConfig)
-				l.pvc = framework.MakePersistentVolumeClaim(pvcConfig, l.ns.Name)
+				l.pv = e2epv.MakePersistentVolume(pvConfig)
+				l.pvc = e2epv.MakePersistentVolumeClaim(pvcConfig, l.ns.Name)
 			}
 		case testpatterns.DynamicPV:
 			if dDriver, ok := driver.(DynamicPVTestDriver); ok {
@@ -154,7 +155,7 @@ func (t *volumeModeTestSuite) defineTests(driver TestDriver, pattern testpattern
 				}
 				l.sc.VolumeBindingMode = &volBindMode
 
-				l.pvc = framework.MakePersistentVolumeClaim(framework.PersistentVolumeClaimConfig{
+				l.pvc = e2epv.MakePersistentVolumeClaim(e2epv.PersistentVolumeClaimConfig{
 					ClaimSize:        dDriver.GetClaimSize(),
 					StorageClassName: &(l.sc.Name),
 					VolumeMode:       &pattern.VolMode,
@@ -168,9 +169,9 @@ func (t *volumeModeTestSuite) defineTests(driver TestDriver, pattern testpattern
 	cleanup := func() {
 		l.cleanupResource()
 
-		if l.testCleanup != nil {
-			l.testCleanup()
-			l.testCleanup = nil
+		if l.driverCleanup != nil {
+			l.driverCleanup()
+			l.driverCleanup = nil
 		}
 
 		validateMigrationVolumeOpCounts(f.ClientSet, dInfo.InTreePluginName, l.intreeOps, l.migratedOps)
@@ -200,10 +201,10 @@ func (t *volumeModeTestSuite) defineTests(driver TestDriver, pattern testpattern
 				l.pvc, err = l.cs.CoreV1().PersistentVolumeClaims(l.ns.Name).Create(l.pvc)
 				framework.ExpectNoError(err, "Failed to create pvc")
 
-				framework.ExpectNoError(framework.WaitOnPVandPVC(l.cs, l.ns.Name, l.pv, l.pvc), "Failed to bind pv and pvc")
+				framework.ExpectNoError(e2epv.WaitOnPVandPVC(l.cs, l.ns.Name, l.pv, l.pvc), "Failed to bind pv and pvc")
 
 				ginkgo.By("Creating pod")
-				pod := e2epod.MakeSecPod(l.ns.Name, []*v1.PersistentVolumeClaim{l.pvc}, nil, false, "", false, false, framework.SELinuxLabel, nil)
+				pod := e2epod.MakeSecPod(l.ns.Name, []*v1.PersistentVolumeClaim{l.pvc}, nil, false, "", false, false, e2epv.SELinuxLabel, nil)
 				// Setting node
 				pod.Spec.NodeName = l.config.ClientNodeName
 				pod, err = l.cs.CoreV1().Pods(l.ns.Name).Create(pod)
@@ -281,7 +282,7 @@ func (t *volumeModeTestSuite) defineTests(driver TestDriver, pattern testpattern
 
 		ginkgo.By("Creating pod")
 		var err error
-		pod := e2epod.MakeSecPod(l.ns.Name, []*v1.PersistentVolumeClaim{l.pvc}, nil, false, "", false, false, framework.SELinuxLabel, nil)
+		pod := e2epod.MakeSecPod(l.ns.Name, []*v1.PersistentVolumeClaim{l.pvc}, nil, false, "", false, false, e2epv.SELinuxLabel, nil)
 		// Change volumeMounts to volumeDevices and the other way around
 		pod = swapVolumeMode(pod)
 
@@ -331,7 +332,7 @@ func (t *volumeModeTestSuite) defineTests(driver TestDriver, pattern testpattern
 
 		ginkgo.By("Creating pod")
 		var err error
-		pod := e2epod.MakeSecPod(l.ns.Name, []*v1.PersistentVolumeClaim{l.pvc}, nil, false, "", false, false, framework.SELinuxLabel, nil)
+		pod := e2epod.MakeSecPod(l.ns.Name, []*v1.PersistentVolumeClaim{l.pvc}, nil, false, "", false, false, e2epv.SELinuxLabel, nil)
 		for i := range pod.Spec.Containers {
 			pod.Spec.Containers[i].VolumeDevices = nil
 			pod.Spec.Containers[i].VolumeMounts = nil
@@ -373,7 +374,7 @@ func (t *volumeModeTestSuite) defineTests(driver TestDriver, pattern testpattern
 
 func generateConfigsForPreprovisionedPVTest(scName string, volBindMode storagev1.VolumeBindingMode,
 	volMode v1.PersistentVolumeMode, pvSource v1.PersistentVolumeSource, volumeNodeAffinity *v1.VolumeNodeAffinity) (*storagev1.StorageClass,
-	framework.PersistentVolumeConfig, framework.PersistentVolumeClaimConfig) {
+	e2epv.PersistentVolumeConfig, e2epv.PersistentVolumeClaimConfig) {
 	// StorageClass
 	scConfig := &storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
@@ -383,7 +384,7 @@ func generateConfigsForPreprovisionedPVTest(scName string, volBindMode storagev1
 		VolumeBindingMode: &volBindMode,
 	}
 	// PV
-	pvConfig := framework.PersistentVolumeConfig{
+	pvConfig := e2epv.PersistentVolumeConfig{
 		PVSource:         pvSource,
 		NodeAffinity:     volumeNodeAffinity,
 		NamePrefix:       pvNamePrefix,
@@ -391,7 +392,7 @@ func generateConfigsForPreprovisionedPVTest(scName string, volBindMode storagev1
 		VolumeMode:       &volMode,
 	}
 	// PVC
-	pvcConfig := framework.PersistentVolumeClaimConfig{
+	pvcConfig := e2epv.PersistentVolumeClaimConfig{
 		AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 		StorageClassName: &scName,
 		VolumeMode:       &volMode,
