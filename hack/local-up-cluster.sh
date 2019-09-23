@@ -72,7 +72,7 @@ WAIT_FOR_URL_API_SERVER=${WAIT_FOR_URL_API_SERVER:-60}
 MAX_TIME_FOR_URL_API_SERVER=${MAX_TIME_FOR_URL_API_SERVER:-1}
 ENABLE_DAEMON=${ENABLE_DAEMON:-false}
 HOSTNAME_OVERRIDE=${HOSTNAME_OVERRIDE:-"127.0.0.1"}
-EXTERNAL_CLOUD_PROVIDER=${EXTERNAL_CLOUD_PROVIDER:-false}
+EXTERNAL_CLOUD_PROVIDER=${EXTERNAL_CLOUD_PROVIDER:-true}
 EXTERNAL_CLOUD_PROVIDER_BINARY=${EXTERNAL_CLOUD_PROVIDER_BINARY:-""}
 CLOUD_PROVIDER=${CLOUD_PROVIDER:-""}
 CLOUD_CONFIG=${CLOUD_CONFIG:-""}
@@ -525,7 +525,7 @@ function start_apiserver {
 
     cloud_config_arg="--cloud-provider=${CLOUD_PROVIDER} --cloud-config=${CLOUD_CONFIG}"
     if [[ "${EXTERNAL_CLOUD_PROVIDER:-}" == "true" ]]; then
-      cloud_config_arg="--cloud-provider=external"
+      cloud_config_arg=
     fi
 
     if [[ -z "${AUDIT_POLICY_FILE}" ]]; then
@@ -613,9 +613,9 @@ function start_controller_manager {
 
     cloud_config_arg=("--cloud-provider=${CLOUD_PROVIDER}" "--cloud-config=${CLOUD_CONFIG}")
     if [[ "${EXTERNAL_CLOUD_PROVIDER:-}" == "true" ]]; then
-      cloud_config_arg=("--cloud-provider=external")
-      cloud_config_arg+=("--external-cloud-volume-plugin=${CLOUD_PROVIDER}")
-      cloud_config_arg+=("--cloud-config=${CLOUD_CONFIG}")
+      cloud_config_arg=
+      cloud_config_arg+=
+      cloud_config_arg+=
     fi
 
     CTLRMGR_LOG=${LOG_DIR}/kube-controller-manager.log
@@ -641,20 +641,11 @@ function start_controller_manager {
 }
 
 function start_cloud_controller_manager {
-    if [ -z "${CLOUD_CONFIG}" ]; then
-      echo "CLOUD_CONFIG cannot be empty!"
-      exit 1
-    fi
-    if [ ! -f "${CLOUD_CONFIG}" ]; then
-      echo "Cloud config ${CLOUD_CONFIG} doesn't exist"
-      exit 1
-    fi
-
     node_cidr_args=()
     if [[ "${NET_PLUGIN}" == "kubenet" ]]; then
       node_cidr_args=("--allocate-node-cidrs=true" "--cluster-cidr=10.1.0.0/16")
     fi
-
+    echo "Janitha ${CONTROLPLANE_SUDO} "${EXTERNAL_CLOUD_PROVIDER_BINARY:-"${GO_OUT}/hyperkube" cloud-controller-manager}""
     CLOUD_CTLRMGR_LOG=${LOG_DIR}/cloud-controller-manager.log
     ${CONTROLPLANE_SUDO} "${EXTERNAL_CLOUD_PROVIDER_BINARY:-"${GO_OUT}/hyperkube" cloud-controller-manager}" \
       --v="${LOG_LEVEL}" \
@@ -677,7 +668,7 @@ function start_kubelet {
     cloud_config_arg=("--cloud-provider=${CLOUD_PROVIDER}" "--cloud-config=${CLOUD_CONFIG}")
     if [[ "${EXTERNAL_CLOUD_PROVIDER:-}" == "true" ]]; then
        cloud_config_arg=("--cloud-provider=external")
-       cloud_config_arg+=("--provider-id=$(hostname)")
+       cloud_config_arg+=("--provider-id=")
     fi
 
     mkdir -p "/var/lib/kubelet" &>/dev/null || sudo mkdir -p "/var/lib/kubelet"

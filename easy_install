@@ -1,0 +1,4 @@
+hack/install-etcd.sh
+export PATH="/home/ubuntu/go/src/kubernetes/kubernetes/third_party/etcd:${PATH}"
+hack/local-up-cluster.sh
+https://kubernetes.io/docs/tutorials/stateless-application/expose-external-ip-address/
