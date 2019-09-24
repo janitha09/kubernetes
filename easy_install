@@ -5,3 +5,4 @@ https://kubernetes.io/docs/tutorials/stateless-application/expose-external-ip-ad
 CLOUD_PROVIDER=aws HOSTNAME_OVERRIDE=ip-10-63-10-66.us-west-2.compute.internal hack/local-up-cluster.sh
 I0924 18:57:18.597038   13405 event.go:255] Event(v1.ObjectReference{Kind:"Service", Namespace:"default", Name:"my-service", UID:"7d657d39-ec02-4a40-bc53-e7222005386f", APIVersion:"v1", ResourceVersion:"387", FieldPath:""}): type: 'Warning' reason: 'SyncLoadBalancerFailed' Error syncing load balancer: failed to ensure load balancer: could not find any suitable subnets for creating the ELB
 this is what goes to the events in describe
+cluster/kubectl.sh get nodes -o json | jq .items[].spec.taints
