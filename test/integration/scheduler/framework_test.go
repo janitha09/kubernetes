@@ -118,7 +118,7 @@ var _ = framework.PreFilterPlugin(&PreFilterPlugin{})
 var _ = framework.ScorePlugin(&ScorePlugin{})
 var _ = framework.FilterPlugin(&FilterPlugin{})
 var _ = framework.ScorePlugin(&ScorePlugin{})
-var _ = framework.ScoreWithNormalizePlugin(&ScoreWithNormalizePlugin{})
+var _ = framework.ScorePlugin(&ScoreWithNormalizePlugin{})
 var _ = framework.ReservePlugin(&ReservePlugin{})
 var _ = framework.PostFilterPlugin(&PostFilterPlugin{})
 var _ = framework.PreBindPlugin(&PreBindPlugin{})
@@ -160,6 +160,10 @@ func (sp *ScorePlugin) Score(pc *framework.PluginContext, p *v1.Pod, nodeName st
 		score = framework.MaxNodeScore
 	}
 	return score, nil
+}
+
+func (sp *ScorePlugin) NormalizeScore(pc *framework.PluginContext, pod *v1.Pod, scores framework.NodeScoreList) *framework.Status {
+	return nil
 }
 
 // Name returns name of the score plugin.
@@ -324,6 +328,11 @@ func (pp *PostBindPlugin) reset() {
 // Name returns name of the plugin.
 func (pp *PreFilterPlugin) Name() string {
 	return prefilterPluginName
+}
+
+// Updater returns the updater interface.
+func (pp *PreFilterPlugin) Updater() framework.Updater {
+	return nil
 }
 
 // PreFilter is a test function that returns (true, nil) or errors for testing.
