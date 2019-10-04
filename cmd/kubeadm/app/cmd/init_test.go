@@ -19,13 +19,12 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/kubernetes/cmd/kubeadm/app/cmd/options"
-	"k8s.io/kubernetes/cmd/kubeadm/app/features"
 )
 
 const (
@@ -49,6 +48,28 @@ controlPlaneEndpoint: "3.4.5.6"
 `
 )
 
+func TestFileIO(t *testing.T) {
+	tmpDir, err := ioutil.TempDir("", "kubeadm-init-test")
+	configFilePath := filepath.Join(tmpDir, "test-config-file")
+	cfgFile, err := os.Create(configFilePath)
+	if _, err = cfgFile.WriteString(testInitConfig); err != nil {
+		t.Fatalf("Unable to write file %q: %v", configFilePath, err)
+	}
+	fmt.Printf("Janitha %s", configFilePath)
+	fmt.Println()
+	file, err := os.Open(configFilePath) // For read access.
+	if err != nil {
+		log.Fatal(err)
+	}
+	data := make([]byte, 10000)
+	count, err := file.Read(data)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Janitha read %d bytes: %q\n", count, data[:count])
+	fmt.Println()
+	defer file.Close()
+}
 func TestNewInitData(t *testing.T) {
 	// create temp directory
 	tmpDir, err := ioutil.TempDir("", "kubeadm-init-test")
@@ -60,9 +81,11 @@ func TestNewInitData(t *testing.T) {
 	// create config file
 	configFilePath := filepath.Join(tmpDir, "test-config-file")
 	cfgFile, err := os.Create(configFilePath)
+	// fmt.Println("Janitha " + string(cfgFile))
 	if err != nil {
 		t.Errorf("Unable to create file %q: %v", configFilePath, err)
 	}
+
 	defer cfgFile.Close()
 	if _, err = cfgFile.WriteString(testInitConfig); err != nil {
 		t.Fatalf("Unable to write file %q: %v", configFilePath, err)
@@ -79,95 +102,98 @@ func TestNewInitData(t *testing.T) {
 		{
 			name: "pass without any flag (use defaults)",
 		},
-		{
-			name: "fail if unknown feature gates flag are passed",
-			flags: map[string]string{
-				options.FeatureGatesString: "unknown=true",
-			},
-			expectError: true,
-		},
-		{
-			name: "fail if deprecated feature gates are set",
-			flags: map[string]string{
-				options.FeatureGatesString: fmt.Sprintf("%s=true", features.CoreDNS),
-			},
-			expectError: true,
-		},
-		{
-			name: "fails if invalid preflight checks are provided",
-			flags: map[string]string{
-				options.IgnorePreflightErrors: "all,something-else",
-			},
-			expectError: true,
-		},
+		// {
+		// 	name: "fail if unknown feature gates flag are passed",
+		// 	flags: map[string]string{
+		// 		options.FeatureGatesString: "unknown=true",
+		// 	},
+		// 	expectError: true,
+		// },
+		// {
+		// 	name: "fail if deprecated feature gates are set",
+		// 	flags: map[string]string{
+		// 		options.FeatureGatesString: fmt.Sprintf("%s=true", features.CoreDNS),
+		// 	},
+		// 	expectError: true,
+		// },
+		// {
+		// 	name: "fails if invalid preflight checks are provided",
+		// 	flags: map[string]string{
+		// 		options.IgnorePreflightErrors: "all,something-else",
+		// 	},
+		// 	expectError: true,
+		// },
 
-		// Init data passed using config file
-		{
-			name: "Pass with config from file",
-			flags: map[string]string{
-				options.CfgPath: configFilePath,
-			},
-		},
-		{
-			name: "--cri-socket and --node-name flags override config from file",
-			flags: map[string]string{
-				options.CfgPath:       configFilePath,
-				options.NodeCRISocket: "/var/run/crio/crio.sock",
-				options.NodeName:      "anotherName",
-			},
-			validate: func(t *testing.T, data *initData) {
-				// validate that cri-socket and node-name are overwritten
-				if data.cfg.NodeRegistration.CRISocket != "/var/run/crio/crio.sock" {
-					t.Errorf("Invalid NodeRegistration.CRISocket")
-				}
-				if data.cfg.NodeRegistration.Name != "anotherName" {
-					t.Errorf("Invalid NodeRegistration.Name")
-				}
-			},
-		},
-		{
-			name: "fail if mixedArguments are passed",
-			flags: map[string]string{
-				options.CfgPath:                   configFilePath,
-				options.APIServerAdvertiseAddress: "1.2.3.4",
-			},
-			expectError: true,
-		},
+		// // Init data passed using config file
+		// {
+		// 	name: "Pass with config from file",
+		// 	flags: map[string]string{
+		// 		options.CfgPath: configFilePath,
+		// 	},
+		// },
+		// {
+		// 	name: "--cri-socket and --node-name flags override config from file",
+		// 	flags: map[string]string{
+		// 		options.CfgPath:       configFilePath,
+		// 		options.NodeCRISocket: "/var/run/crio/crio.sock",
+		// 		options.NodeName:      "anotherName",
+		// 	},
+		// 	validate: func(t *testing.T, data *initData) {
+		// 		// validate that cri-socket and node-name are overwritten
+		// 		if data.cfg.NodeRegistration.CRISocket != "/var/run/crio/crio.sock" {
+		// 			t.Errorf("Invalid NodeRegistration.CRISocket")
+		// 		}
+		// 		if data.cfg.NodeRegistration.Name != "anotherName" {
+		// 			t.Errorf("Invalid NodeRegistration.Name")
+		// 		}
+		// 	},
+		// },
+		// {
+		// 	name: "fail if mixedArguments are passed",
+		// 	flags: map[string]string{
+		// 		options.CfgPath:                   configFilePath,
+		// 		options.APIServerAdvertiseAddress: "1.2.3.4",
+		// 	},
+		// 	expectError: true,
+		// },
 
-		// Pre-flight errors:
-		{
-			name: "pre-flights errors from CLI args only",
-			flags: map[string]string{
-				options.IgnorePreflightErrors: "a,b",
-			},
-			validate: expectedInitIgnorePreflightErrors("a", "b"),
-		},
-		{
-			name: "pre-flights errors from InitConfiguration only",
-			flags: map[string]string{
-				options.CfgPath: configFilePath,
-			},
-			validate: expectedInitIgnorePreflightErrors("c", "d"),
-		},
-		{
-			name: "pre-flights errors from both CLI args and InitConfiguration",
-			flags: map[string]string{
-				options.CfgPath:               configFilePath,
-				options.IgnorePreflightErrors: "a,b",
-			},
-			validate: expectedInitIgnorePreflightErrors("a", "b", "c", "d"),
-		},
+		// // Pre-flight errors:
+		// {
+		// 	name: "pre-flights errors from CLI args only",
+		// 	flags: map[string]string{
+		// 		options.IgnorePreflightErrors: "a,b",
+		// 	},
+		// 	validate: expectedInitIgnorePreflightErrors("a", "b"),
+		// },
+		// {
+		// 	name: "pre-flights errors from InitConfiguration only",
+		// 	flags: map[string]string{
+		// 		options.CfgPath: configFilePath,
+		// 	},
+		// 	validate: expectedInitIgnorePreflightErrors("c", "d"),
+		// },
+		// {
+		// 	name: "pre-flights errors from both CLI args and InitConfiguration",
+		// 	flags: map[string]string{
+		// 		options.CfgPath:               configFilePath,
+		// 		options.IgnorePreflightErrors: "a,b",
+		// 	},
+		// 	validate: expectedInitIgnorePreflightErrors("a", "b", "c", "d"),
+		// },
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// initialize an external init option and inject it to the init cmd
 			initOptions := newInitOptions()
+			fmt.Printf("Janitha initOptions %+v\n ", initOptions)
 			cmd := NewCmdInit(nil, initOptions)
+			fmt.Printf("Janitha cmd %+v\n ", cmd.Flags())
 
 			// sets cmd flags (that will be reflected on the init options)
 			for f, v := range tc.flags {
 				cmd.Flags().Set(f, v)
 			}
+			fmt.Printf("Janitha cmd %+v\n ", cmd.Flags())
 
 			// test newInitData method
 			data, err := newInitData(cmd, tc.args, initOptions, nil)

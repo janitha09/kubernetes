@@ -157,21 +157,9 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "active_deadline_test.go",
-        "kubelet_getters_test.go",
-        "kubelet_network_test.go",
+
         "kubelet_node_status_test.go",
-        "kubelet_pods_linux_test.go",
-        "kubelet_pods_test.go",
-        "kubelet_pods_windows_test.go",
-        "kubelet_resources_test.go",
-        "kubelet_test.go",
-        "kubelet_volumes_linux_test.go",
-        "kubelet_volumes_test.go",
-        "pod_container_deletor_test.go",
-        "pod_workers_test.go",
-        "reason_cache_test.go",
-        "runonce_test.go",
+
     ],
     embed = [":go_default_library"],
     deps = [

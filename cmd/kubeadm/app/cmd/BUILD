@@ -71,12 +71,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "completion_test.go",
-        "config_test.go",
         "init_test.go",
-        "join_test.go",
-        "token_test.go",
-        "version_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

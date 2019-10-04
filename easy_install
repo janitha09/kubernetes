@@ -104,3 +104,5 @@ status:
   readyReplicas: 5
   replicas: 5
   updatedReplicas: 5
+  kubelet_node_status.go:94] Unable to register node "ip-10-63-130-255.us-west-2.compute.internal" with API server: nodes "ip-10-63-130-255.us-west-2.compute.internal" is forbidden: node "ip-10-63-130-255" is not allowed to modify node "ip-10-63-130-255.us-west-2.compute.internal"
+https://github.com/kubernetes/kubeadm/issues/584

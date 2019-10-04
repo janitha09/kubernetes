@@ -17,6 +17,7 @@ limitations under the License.
 package phases
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -41,6 +42,7 @@ func (t *testCertsData) CertificateWriteDir() string        { return t.cfg.Certi
 
 func TestCertsWithCSRs(t *testing.T) {
 	csrDir := testutil.SetupTempDir(t)
+	fmt.Println("Janitha " + csrDir)
 	defer os.RemoveAll(csrDir)
 	certDir := testutil.SetupTempDir(t)
 	defer os.RemoveAll(certDir)
